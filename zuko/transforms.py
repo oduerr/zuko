@@ -633,6 +633,7 @@ class BernsteinTransform(MonotonicTransform):
     codomain = constraints.real
     bijective = True
     sign = +1
+    call_and_ladj = _call_and_ladj
 
     def __init__(self, theta: Tensor, linear: bool = False, **kwargs):
         super().__init__(None, phi=(theta,), **kwargs)
@@ -650,8 +651,6 @@ class BernsteinTransform(MonotonicTransform):
             self.order - 1, device=theta.device, dtype=theta.dtype
         )
 
-        self.eps = 1e-6
-
         if self.linear:
             # save slope on boundaries for interpolation
             x = torch.tensor([self.eps, 1 - self.eps])
@@ -660,8 +659,6 @@ class BernsteinTransform(MonotonicTransform):
                 # add singleton dimensions for batch dimensions
                 dims = [...] + [None] * (rank - 1)
                 x = x[dims]
-            print(x.shape, self.theta.shape)
-            print(x.shape, self.theta.dim())
             self.offset = self.b_poly(x, self.theta, self.basis)
             self.slope = self.b_poly(x, self.dtheta, self.dbasis)
 
