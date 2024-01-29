@@ -6,18 +6,19 @@ __all__ = [
 ]
 
 import torch
-import torch.nn as nn
 
 from functools import partial
 from math import ceil, prod
-from torch import Tensor, LongTensor, Size
+from torch import LongTensor, Size, Tensor
 from torch.distributions import Transform
 from typing import *
 
-from .core import *
+# isort: local
+from .core import Flow, LazyTransform, Unconditional
+from .gaussianization import ElementWiseTransform
 from ..distributions import DiagNormal
-from ..transforms import *
 from ..nn import MaskedMLP
+from ..transforms import *
 from ..utils import broadcast, unpack
 
 
@@ -64,6 +65,20 @@ class MaskedAutoregressiveTransform(LazyTransform):
         >>> t(c).inv(y)
         tensor([-0.9485,  1.5290,  0.2018])
     """
+
+    def __new__(
+        cls,
+        features: int = None,
+        context: int = 0,
+        passes: int = None,
+        order: LongTensor = None,
+        *args,
+        **kwargs,
+    ) -> LazyTransform:
+        if features is None or features > 1:
+            return super().__new__(cls)
+        else:
+            return ElementWiseTransform(features, context, *args, **kwargs)
 
     def __init__(
         self,

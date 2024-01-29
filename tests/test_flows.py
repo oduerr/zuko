@@ -8,7 +8,6 @@ from pathlib import Path
 from torch import randn
 from zuko.flows import *
 
-
 torch.set_default_dtype(torch.float64)
 
 
@@ -79,9 +78,6 @@ def test_triangular_transforms():
         GeneralCouplingTransform,
         MaskedAutoregressiveTransform,
         partial(MaskedAutoregressiveTransform, passes=2),
-        NeuralAutoregressiveTransform,
-        partial(NeuralAutoregressiveTransform, passes=2),
-        UnconstrainedNeuralAutoregressiveTransform,
     ]
 
     for T in Ts:

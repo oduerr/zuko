@@ -9,14 +9,16 @@ import torch
 
 from functools import partial
 from math import prod
-from torch import Tensor, BoolTensor, Size
+from torch import BoolTensor, Size, Tensor
 from torch.distributions import Transform
 from typing import *
 
-from .core import *
+# isort: local
+from .core import Flow, LazyTransform, Unconditional
+from .gaussianization import ElementWiseTransform
 from ..distributions import DiagNormal
-from ..transforms import *
 from ..nn import MLP
+from ..transforms import *
 from ..utils import broadcast, unpack
 
 
@@ -60,6 +62,19 @@ class GeneralCouplingTransform(LazyTransform):
         >>> t(c).inv(y)
         tensor([-0.8743,  0.6232,  1.2439])
     """
+
+    def __new__(
+        cls,
+        features: int = None,
+        context: int = 0,
+        mask: BoolTensor = None,
+        *args,
+        **kwargs,
+    ) -> LazyTransform:
+        if features is None or features > 1:
+            return super().__new__(cls)
+        else:
+            return ElementWiseTransform(features, context, *args, **kwargs)
 
     def __init__(
         self,

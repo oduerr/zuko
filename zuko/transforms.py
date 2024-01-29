@@ -29,14 +29,14 @@ import torch
 import torch.nn.functional as F
 
 from textwrap import indent
-from torch import Tensor, BoolTensor, LongTensor, Size
+from torch import BoolTensor, LongTensor, Size, Tensor
 from torch.distributions import constraints
 from torch.distributions.transforms import *
 from torch.distributions.utils import _sum_rightmost
 from typing import *
 
+# isort: local
 from .utils import bisection, broadcast, gauss_legendre, odeint
-
 
 torch.distributions.transforms._InverseTransform.__name__ = 'Inverse'
 
@@ -497,10 +497,7 @@ class MonotonicRQSTransform(Transform):
         mask, x0, x1, y0, y1, d0, d1, s = self.bin(k)
 
         z = mask * (x - x0) / (x1 - x0)
-
-        y = y0 + (y1 - y0) * (s * z**2 + d0 * z * (1 - z)) / (
-            s + (d0 + d1 - 2 * s) * z * (1 - z)
-        )
+        y = y0 + (y1 - y0) * (s * z**2 + d0 * z * (1 - z)) / (s + (d0 + d1 - 2 * s) * z * (1 - z))
 
         return torch.where(mask, y, x)
 
@@ -529,10 +526,7 @@ class MonotonicRQSTransform(Transform):
         mask, x0, x1, y0, y1, d0, d1, s = self.bin(k)
 
         z = mask * (x - x0) / (x1 - x0)
-
-        y = y0 + (y1 - y0) * (s * z**2 + d0 * z * (1 - z)) / (
-            s + (d0 + d1 - 2 * s) * z * (1 - z)
-        )
+        y = y0 + (y1 - y0) * (s * z**2 + d0 * z * (1 - z)) / (s + (d0 + d1 - 2 * s) * z * (1 - z))
 
         jacobian = (
             s**2
@@ -646,9 +640,7 @@ class BernsteinTransform(MonotonicTransform):
         self.order = self.theta.shape[-1] - 1
         self.dtheta = self.order * (self.theta[..., 1:] - self.theta[..., :-1])
 
-        self.basis = self.get_bernstein_basis(
-            self.order, device=theta.device, dtype=theta.dtype
-        )
+        self.basis = self.get_bernstein_basis(self.order, device=theta.device, dtype=theta.dtype)
         self.dbasis = self.get_bernstein_basis(
             self.order - 1, device=theta.device, dtype=theta.dtype
         )
@@ -702,9 +694,7 @@ class BernsteinTransform(MonotonicTransform):
 
         if self.linear:
             y0 = self.slope[0] * (x - self.eps) + self.offset[0]  # h'(eps) * x + h(eps)
-            y1 = (
-                self.slope[1] * (x - 1 + self.eps) + self.offset[1]
-            )  # h'(1-eps) * x + h(1-eps)
+            y1 = self.slope[1] * (x - 1 + self.eps) + self.offset[1]  # h'(1-eps) * x + h(1-eps)
             y = torch.where(x <= self.eps, y0, y)
             y = torch.where(x >= 1 - self.eps, y1, y)
 
@@ -810,13 +800,13 @@ class UnconstrainedMonotonicTransform(MonotonicTransform):
         self.n = n
 
     def f(self, x: Tensor) -> Tensor:
-        return gauss_legendre(
+        return self.C + gauss_legendre(
             f=self.g,
             a=torch.zeros_like(x),
             b=x,
             n=self.n,
             phi=self.phi,
-        ) + self.C
+        )
 
     def log_abs_det_jacobian(self, x: Tensor, y: Tensor) -> Tensor:
         return self.g(x).log()
@@ -1054,10 +1044,12 @@ class FreeFormJacobianTransform(Transform):
                 dx = self.f(t, x)
 
             if self.exact:
-                jacobian = torch.autograd.grad(dx, x, I, create_graph=True, is_grads_batched=True)[0]
+                (jacobian,) = torch.autograd.grad(
+                    dx, x, I, create_graph=True, is_grads_batched=True
+                )
                 trace = torch.einsum('i...i', jacobian)
             else:
-                epsjp = torch.autograd.grad(dx, x, eps, create_graph=True)[0]
+                (epsjp,) = torch.autograd.grad(dx, x, eps, create_graph=True)
                 trace = (epsjp * eps).sum(dim=-1)
 
             return dx, trace * self.trace_scale

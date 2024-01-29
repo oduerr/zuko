@@ -1,18 +1,17 @@
 r"""Polynomial flows."""
 
 __all__ = [
-    "SOSPF",
-    "BPF",
+    'SOSPF',
+    'BPF',
 ]
-
-import torch
 
 from functools import partial
 from typing import *
 
+# isort: local
 from .autoregressive import MAF
-from .core import *
-from ..transforms import SoftclipTransform, SOSPolynomialTransform, BernsteinTransform
+from .core import Unconditional
+from ..transforms import BernsteinTransform, SoftclipTransform, SOSPolynomialTransform
 
 
 class SOSPF(MAF):
@@ -72,8 +71,8 @@ class BPF(MAF):
         :class:`zuko.transforms.BernsteinTransform`
 
     References:
-        | Deep transformation models: Tackling complex regression problems with neural network based transformation models (Sick et al., 2020)
-        | https://arxiv.org/abs/2004.00464
+        | Short-Term Density Forecasting of Low-Voltage Load using Bernstein-Polynomial Normalizing Flows (Arpogaus et al., 2022)
+        | https://arxiv.org/abs/2204.13939
 
     Arguments:
         features: The number of features.
