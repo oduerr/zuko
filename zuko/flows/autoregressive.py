@@ -88,6 +88,7 @@ class MaskedAutoregressiveTransform(LazyTransform):
         order: LongTensor = None,
         univariate: Callable[..., Transform] = MonotonicAffineTransform,
         shapes: Sequence[Size] = ((), ()),
+        adjacency: Tensor = None,
         **kwargs,
     ):
         super().__init__()
@@ -111,10 +112,17 @@ class MaskedAutoregressiveTransform(LazyTransform):
         self.passes = min(max(passes, 1), features)
         self.order = torch.div(order, ceil(features / self.passes), rounding_mode='floor')
 
-        in_order = torch.cat((self.order, torch.full((context,), -1)))
-        out_order = torch.repeat_interleave(self.order, self.total)
-        adjacency = out_order[:, None] > in_order
+        if adjacency is None:
+            in_order = torch.cat((self.order, torch.full((context,), -1)))
+            out_order = torch.repeat_interleave(self.order, self.total)
+            adjacency = out_order[:, None] > in_order
+        else:
+            ## The existing Adjacency matrix is replicated 
+            assert(len(self.shapes) == 1) # TODO: generalize to more complicated flows
+            reps = self.shapes[0][0]
+            adjacency = torch.repeat_interleave(adjacency.bool(), repeats=reps, dim=0)
 
+        self.adjacency = adjacency
         # Hyper network
         self.hyper = MaskedMLP(adjacency, **kwargs)
 

@@ -10,6 +10,15 @@ from zuko.flows import *
 
 torch.set_default_dtype(torch.float64)
 
+def test_causal_flow():
+    flow = zuko.flows.BPF(features=3, transforms=1, hidden_features=[150]*5, degree=30, linear=True)
+    x = randn(256, 3)
+    # Calculate the gradient of the log probability of the data
+    log_p = flow().log_prob(x)
+    loss = -log_p.mean()
+
+
+
 
 @pytest.mark.parametrize('F', [GMM, NICE, MAF, NSF, SOSPF, NAF, UNAF, CNF, GF, BPF])
 def test_flows(tmp_path: Path, F: callable):
