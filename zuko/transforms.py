@@ -606,40 +606,26 @@ class BernsteinTransform(MonotonicTransform):
 
     The transformation function is defined as:
 
-<<<<<<< HEAD
-    where :math:`b_{i,j}` are the Bernstein basis polynomials and :math:`\sigma(x)` is the sigmoid function.
-=======
     .. math:: f(x) = \frac{1}{M + 1} \sum_{i=0}^{M} b_{i+1,M-i+1}(x) \, \theta_i
 
     where :math:`b_{i,j}` are the Bernstein basis polynomials.
 
     Since :math:`f` is only defined for :math:`x \in [0, 1]`, it is linearly extrapolated outside this interval.
     The second-order derivative is enforced to be zero at the bounds for smooth transitions.
->>>>>>> MArpogaus/bpf_extrapolation
 
     References:
         | Deep transformation models: Tackling complex regression problems with neural network based transformation models (Sick et al., 2020)
         | https://arxiv.org/abs/2004.00464
-<<<<<<< HEAD
-=======
 
         | Short-Term Density Forecasting of Low-Voltage Load using Bernstein-Polynomial Normalizing Flows (Arpogaus et al., 2022)
         | https://arxiv.org/abs/2204.13939
->>>>>>> MArpogaus/bpf_extrapolation
 
     Wikipedia:
         https://wikipedia.org/wiki/Bernstein_polynomial
 
     Arguments:
         theta: The unconstrained polynomial coefficients :math:`\theta`,
-<<<<<<< HEAD
-            with shape :math:`(*, M + 1)`.
-        linear: Whether to replace the sigmoid function by a linear mapping :math:`\frac{x + B}{2B}`.
-            If :py:`True`, it is assumed that input features are in :math:`[-B, B]`.
-            Failing to satisfy this constraint will result in NaNs.
-=======
             with shape :math:`(*, M - 1)`.
->>>>>>> MArpogaus/bpf_extrapolation
         kwargs: Keyword arguments passed to :class:`MonotonicTransform`.
     """
 
@@ -648,35 +634,6 @@ class BernsteinTransform(MonotonicTransform):
     bijective = True
     sign = +1
 
-<<<<<<< HEAD
-    # enforce usage of analytical log_abs_det_jacobian
-    call_and_ladj = _call_and_ladj
-
-    def __init__(self, theta: Tensor, linear: bool = False, **kwargs):
-        super().__init__(None, phi=(theta,), **kwargs)
-
-        self.linear = linear
-
-        self.theta = self._increasing(theta)
-        self.order = self.theta.shape[-1] - 1
-        self.dtheta = self.order * (self.theta[..., 1:] - self.theta[..., :-1])
-
-        self.basis = self.get_bernstein_basis(self.order, device=theta.device, dtype=theta.dtype)
-        self.dbasis = self.get_bernstein_basis(
-            self.order - 1, device=theta.device, dtype=theta.dtype
-        )
-
-        if self.linear:
-            # save slope on boundaries for interpolation
-            x = torch.tensor([self.eps, 1 - self.eps], device=theta.device, dtype=theta.dtype)
-            rank = self.theta.dim()
-            if rank > 1:
-                # add singleton dimensions for batch dimensions
-                dims = [...] + [None] * (rank - 1)
-                x = x[dims]
-            self.offset = self.b_poly(x, self.theta, self.basis)
-            self.slope = self.b_poly(x, self.dtheta, self.dbasis)
-=======
     def __init__(self, theta: Tensor, **kwargs):
         super().__init__(None, phi=(theta,), **kwargs)
 
@@ -704,7 +661,6 @@ class BernsteinTransform(MonotonicTransform):
         slope = [self._bernstein_poly(x, dtheta, dbasis) for x in bounds]
 
         return tuple(offset), tuple(slope)
->>>>>>> MArpogaus/bpf_extrapolation
 
     @staticmethod
     def _constrain_theta(unconstrained_theta: Tensor) -> Tensor:
@@ -744,58 +700,6 @@ class BernsteinTransform(MonotonicTransform):
         y = torch.mean(b * theta, dim=-1)
         return y
 
-<<<<<<< HEAD
-    @staticmethod
-    def get_bernstein_basis(order, **kwds):
-        alpha = torch.arange(1, order + 2, **kwds)
-        beta = torch.arange(order + 1, 0, -1, **kwds)
-        basis = torch.distributions.Beta(alpha, beta)
-        return basis
-
-    @staticmethod
-    def b_poly(x, theta, basis):
-        b = basis.log_prob(x.unsqueeze(-1)).exp()
-        y_poly = torch.mean(b * theta, dim=-1)
-        return y_poly
-
-    def scale_data(self, x):
-        if self.linear:
-            x = (x + self.bound) / (2 * self.bound)  # map [-B, B] to [0, 1]
-        else:
-            x = torch.nn.functional.sigmoid(x)  # map [-inf, inf] to [0, 1]
-
-        return x
-
-    def f(self, x: Tensor) -> Tensor:
-        x = self.scale_data(x)
-        y = self.b_poly(x, self.theta, self.basis)
-
-        if self.linear:
-            y0 = self.slope[0] * (x - self.eps) + self.offset[0]  # h'(eps) * x + h(eps)
-            y1 = self.slope[1] * (x - 1 + self.eps) + self.offset[1]  # h'(1-eps) * x + h(1-eps)
-            y = torch.where(x <= self.eps, y0, y)
-            y = torch.where(x >= 1 - self.eps, y1, y)
-
-        return y
-
-    def log_abs_det_jacobian(self, x: Tensor, y: Tensor) -> Tensor:
-        x_scaled = self.scale_data(x)
-        ladj = self.b_poly(x_scaled, self.dtheta, self.dbasis).abs().log()
-
-        if self.linear:
-            ladj = torch.where(x_scaled <= self.eps, self.slope[0].abs().log(), ladj)
-            ladj = torch.where(x_scaled >= 1 - self.eps, self.slope[1].abs().log(), ladj)
-            ladj += torch.tensor(1 / (2 * self.bound), device=x.device, dtype=x.dtype).log()
-        else:
-            sigma = torch.nn.functional.sigmoid(x)
-            dsigma = sigma * (1 - sigma)
-            # dsigma converges towards zero for +/- Inf so we add a tiny eps
-            # here to stay numerically stable
-            dsigma += torch.finfo(sigma.dtype).tiny
-            ladj += dsigma.log()
-
-        return ladj
-=======
     def f(self, x: Tensor) -> Tensor:
         x = (x + self.bound) / (2 * self.bound)  # map [-B, B] to [0, 1]
 
@@ -886,7 +790,6 @@ class BoundedBernsteinTransform(BernsteinTransform):
         )
 
         return offset, slope
->>>>>>> MArpogaus/bpf_extrapolation
 
 
 class GaussianizationTransform(MonotonicTransform):

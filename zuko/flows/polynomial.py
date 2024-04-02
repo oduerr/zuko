@@ -87,21 +87,12 @@ class BPF(MAF):
         features: int,
         context: int = 0,
         degree: int = 16,
-<<<<<<< HEAD
-        linear: bool = False,
-        bound: float = 10.0,
-=======
->>>>>>> MArpogaus/bpf_extrapolation
         **kwargs,
     ):
         super().__init__(
             features=features,
             context=context,
-<<<<<<< HEAD
-            univariate=partial(BernsteinTransform, linear=linear, bound=bound),
-=======
             univariate=BoundedBernsteinTransform,
->>>>>>> MArpogaus/bpf_extrapolation
             shapes=[(degree + 1,)],
             **kwargs,
         )
